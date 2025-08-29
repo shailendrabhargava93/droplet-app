@@ -10,11 +10,13 @@ import { ToastProvider } from './context/ToastContext';
 import { UnitProvider } from './context/UnitContext';
 import { Toaster } from 'react-hot-toast';
 import Header from './components/Header';
+import GetStartedScreen from './components/GetStartedScreen';
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'stats' | 'add' | 'settings'>(
-    'stats'
-  );
+  const [activeTab, setActiveTab] = useState<'stats' | 'add' | 'settings'>('stats');
+  const [showGetStarted, setShowGetStarted] = useState(() => {
+    return !localStorage.getItem('onboardingComplete');
+  });
 
   useEffect(() => {
     // Register our new simplified service worker directly
@@ -95,54 +97,60 @@ function App() {
     <WaterProvider>
       <ToastProvider>
         <UnitProvider>
-          <div className="app-container">
-            <Header />
-            <main className="container">
-              {activeTab === 'stats' && (
-                <>
-                  <WaterProgress />
-                  <TodayIntakes />
-                </>
-              )}
+          {showGetStarted ? (
+            <GetStartedScreen onComplete={() => setShowGetStarted(false)} />
+          ) : (
+            <>
+              <div className="app-container">
+                <Header />
+                <main className="container">
+                  {activeTab === 'stats' && (
+                    <>
+                      <WaterProgress />
+                      <TodayIntakes />
+                    </>
+                  )}
 
-              {activeTab === 'add' && <AddWaterIntake />}
+                  {activeTab === 'add' && <AddWaterIntake />}
 
-              {activeTab === 'settings' && <SettingsScreen />}
-            </main>
+                  {activeTab === 'settings' && <SettingsScreen />}
+                </main>
 
-            <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
-          </div>
+                <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+              </div>
+              <Toaster
+                position="bottom-center"
+                containerStyle={{
+                  bottom: 90, // Add space for the bottom navbar
+                }}
+                toastOptions={{
+                  duration: 3000,
+                  style: {
+                    background: '#fff',
+                    color: '#333',
+                    boxShadow: '0 3px 10px rgba(0,0,0,0.1)',
+                    borderRadius: '8px',
+                    padding: '12px 16px',
+                    fontSize: '14px',
+                    maxWidth: '350px',
+                  },
+                  success: {
+                    iconTheme: {
+                      primary: '#00BCD4',
+                      secondary: '#fff',
+                    },
+                  },
+                  error: {
+                    iconTheme: {
+                      primary: '#ff6b6b',
+                      secondary: '#fff',
+                    },
+                  },
+                }}
+              />
+            </>
+          )}
         </UnitProvider>
-        <Toaster
-          position="bottom-center"
-          containerStyle={{
-            bottom: 90, // Add space for the bottom navbar
-          }}
-          toastOptions={{
-            duration: 3000,
-            style: {
-              background: '#fff',
-              color: '#333',
-              boxShadow: '0 3px 10px rgba(0,0,0,0.1)',
-              borderRadius: '8px',
-              padding: '12px 16px',
-              fontSize: '14px',
-              maxWidth: '350px',
-            },
-            success: {
-              iconTheme: {
-                primary: '#00BCD4',
-                secondary: '#fff',
-              },
-            },
-            error: {
-              iconTheme: {
-                primary: '#ff6b6b',
-                secondary: '#fff',
-              },
-            },
-          }}
-        />
       </ToastProvider>
     </WaterProvider>
   );

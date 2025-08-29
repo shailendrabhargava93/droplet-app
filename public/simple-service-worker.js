@@ -1,8 +1,41 @@
-// Simple service worker for reminder functionality
-const CACHE_NAME = 'droplet-cache-v2';
+// Enhanced service worker for mobile and desktop notifications
+const CACHE_NAME = 'droplet-cache-v3';
+const NOTIFICATION_TITLE = 'Time to Drink Water! 💧';
+const NOTIFICATION_OPTIONS = {
+  body: "Don't forget to stay hydrated!",
+  icon: '/icon.svg',
+  badge: '/icon.svg',
+  tag: 'water-reminder',
+  renotify: true,
+  vibrate: [200, 100, 200],
+  requireInteraction: false,
+  actions: [
+    {
+      action: 'open',
+      title: 'Open App',
+    },
+    {
+      action: 'dismiss',
+      title: 'Dismiss',
+    },
+  ],
+};
 
-// Active reminders store - mapping of ids to timers
+// Store for active reminders
 const activeReminders = new Map();
+let wakeLock = null;
+
+// Request wake lock
+async function requestWakeLock() {
+  if ('wakeLock' in navigator) {
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+      console.log('Wake Lock is active');
+    } catch (err) {
+      console.log(`Wake Lock error: ${err.name}, ${err.message}`);
+    }
+  }
+}
 
 self.addEventListener('install', (event) => {
   console.log('[ServiceWorker] Installing new service worker...');
@@ -11,17 +44,38 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
-  console.log('[ServiceWorker] Service worker activated');
+  console.log('[ServiceWorker] Activating service worker...');
+  event.waitUntil(
+    Promise.all([
+      self.clients.claim(),
+      requestWakeLock(),
+      // Notify all clients that the service worker is active
+      self.clients.matchAll().then((clients) => {
+        clients.forEach((client) => {
+          client.postMessage({ type: 'SW_ACTIVATED' });
+        });
+      }),
+    ])
+  );
+});
 
-  // Take control of all pages immediately
-  event.waitUntil(self.clients.claim());
+// Handle notification clicks
+self.addEventListener('notificationclick', (event) => {
+  const notification = event.notification;
+  notification.close();
 
-  // Notify all clients that the service worker is active
-  self.clients.matchAll().then((clients) => {
-    clients.forEach((client) => {
-      client.postMessage({ type: 'SW_ACTIVATED' });
-    });
-  });
+  if (event.action === 'open') {
+    // Open/focus the app
+    event.waitUntil(
+      self.clients.matchAll({ type: 'window' }).then((clientList) => {
+        if (clientList.length > 0) {
+          clientList[0].focus();
+        } else {
+          self.clients.openWindow('/');
+        }
+      })
+    );
+  }
 });
 
 // Handle messages from client
@@ -55,37 +109,53 @@ self.addEventListener('message', (event) => {
 });
 
 // Start a new reminder with the given interval
-function startReminder(id, minutes, client) {
-  // Stop all existing reminders first to ensure only one is active
-  stopAllReminders();
-
-  console.log(
-    `[ServiceWorker] Starting reminder ${id} every ${minutes} minute(s)`
-  );
-
-  // Convert minutes to milliseconds, but use at least 10 seconds
-  const interval = Math.max(minutes * 60 * 1000, 10000);
-
-  // Create the timer
-  const timerId = setInterval(() => {
-    showNotification(id, minutes);
-  }, interval);
-
-  // Store it
-  activeReminders.set(id, timerId);
-
-  // Send confirmation
-  if (client) {
-    client.postMessage({
-      type: 'REMINDER_STARTED',
-      id: id,
-      minutes: minutes,
+async function showNotification(id, minutes) {
+  try {
+    // Try to use standard Notification API first
+    await self.registration.showNotification(NOTIFICATION_TITLE, {
+      ...NOTIFICATION_OPTIONS,
+      timestamp: Date.now(),
+      data: { id, minutes },
+    });
+  } catch (error) {
+    console.error('Error showing notification:', error);
+    // Fallback for mobile browsers that don't support rich notifications
+    await self.registration.showNotification(NOTIFICATION_TITLE, {
+      body: NOTIFICATION_OPTIONS.body,
+      icon: NOTIFICATION_OPTIONS.icon,
     });
   }
+}
 
-  // Also send a test notification immediately
+function startReminder(id, minutes, client) {
+  // Stop any existing reminders
+  stopAllReminders();
+
+  console.log(`[ServiceWorker] Starting reminder ${id} every ${minutes} minutes`);
+
+  // Minimum interval of 1 minute
+  const interval = Math.max(minutes * 60 * 1000, 60 * 1000);
+
+  // Create periodic notifications using setInterval
+  const timerId = setInterval(async () => {
+    await showNotification(id, minutes);
+    // Request wake lock again if needed
+    if (!wakeLock) await requestWakeLock();
+  }, interval);
+
+  // Store the timer
+  activeReminders.set(id, timerId);
+
+  // Send confirmation to client
+  client?.postMessage({
+    type: 'REMINDER_STARTED',
+    id: id,
+    minutes: minutes,
+  });
+
+  // Show test notification after 1 second
   setTimeout(() => {
-    showTestNotification(minutes);
+    showNotification(id, minutes);
   }, 1000);
 }
 

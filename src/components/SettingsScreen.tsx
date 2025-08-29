@@ -4,6 +4,7 @@ import ReminderSettings from './ReminderSettings';
 import UnitSettings from './UnitSettings';
 import ShareApp from './ShareApp';
 import AboutSection from './AboutSection';
+import ResetAppData from './ResetAppData';
 
 const SettingsScreen: React.FC = () => {
   return (
@@ -15,6 +16,7 @@ const SettingsScreen: React.FC = () => {
       <UnitSettings />
       <ShareApp />
       <AboutSection />
+      <ResetAppData />
     </div>
   );
 };
