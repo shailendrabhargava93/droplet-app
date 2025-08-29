@@ -60,10 +60,29 @@ const TodayIntakes: React.FC = () => {
   };
 
   return (
-    <div id="today-intakes" className="today-intakes-card">
-      <h2 className="today-drinks-title">Today's drinks</h2>
+    <div className="today-page">
+      <div style={{
+        background: 'transparent',
+        color: '#00BCD4',
+        borderRadius: '8px',
+        padding: '12px',
+        marginBottom: '24px',
+        border: '1px solid #00BCD4',
+        fontSize: '0.8rem',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+      }}>
+        <span role="img" aria-label="warning" style={{fontSize: '1.1rem'}}>⚠️</span>
+        <span>
+          Caffeinated and unhealthy drinks can harm your health. Drink water instead!
+        </span>
+      </div>
 
-      {todayIntakes.length > 0 ? (
+      <div id="today-intakes" className="today-intakes-card">
+        <h2 className="today-drinks-title">Today's drinks</h2>
+
+        {todayIntakes.length > 0 ? (
         <div className="drinks-list">
           {todayIntakes.map((intake) => (
             <div key={intake.id} className="drink-item">
@@ -99,18 +118,13 @@ const TodayIntakes: React.FC = () => {
         </div>
       ) : (
         <div className="no-drinks-message">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-          >
-            <path d="M12,2C6.48,2,2,6.48,2,12s4.48,10,10,10s10-4.48,10-10S17.52,2,12,2z M12,17L12,17c-0.55,0-1-0.45-1-1v-4c0-0.55,0.45-1,1-1h0 c0.55,0,1,0.45,1,1v4C13,16.55,12.55,17,12,17z M13,9h-2V7h2V9z" />
-          </svg>
+          <i
+          className="pi pi-info-circle settings-icon"
+        ></i>
           <p>No drinks added today</p>
         </div>
       )}
+    </div>
     </div>
   );
 };

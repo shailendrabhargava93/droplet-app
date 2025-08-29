@@ -17,7 +17,7 @@ const WaterWave: React.FC<WaveProps> = ({ progress, current, goal }) => {
         value={progress}
         size={180}
         readOnly
-        strokeWidth={12}
+        strokeWidth={6}
         valueColor="#00BCD4"
         rangeColor="#E0F7FA"
         textColor="transparent"
