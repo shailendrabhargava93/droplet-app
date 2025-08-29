@@ -119,7 +119,7 @@ const AddWaterIntake: React.FC = () => {
       </div>
 
       <div className="amount-section">
-        <h3>Select Amount</h3>
+        <h3>Select Quantity</h3>
 
         <div className="preset-amounts">
           {presetAmounts.map((amount) => (
@@ -148,15 +148,7 @@ const AddWaterIntake: React.FC = () => {
                 )
               }
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-              >
-                <path d="M19,13H5v-2h14V13z" />
-              </svg>
+            <i className="pi pi-minus"></i>
             </Button>
             <InputNumber
               value={selectedAmount}
@@ -173,15 +165,7 @@ const AddWaterIntake: React.FC = () => {
                 setSelectedAmount((prev) => prev + (unit === 'ml' ? 50 : 1))
               }
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-              >
-                <path d="M19,13H13v6h-2v-6H5v-2h6V5h2v6h6V13z" />
-              </svg>
+            <i className="pi pi-plus"></i>
             </Button>
           </div>
         </div>
