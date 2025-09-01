@@ -108,17 +108,7 @@ const TodayIntakes: React.FC = () => {
       )}
       </div>
 
-      <div style={{
-        color: '#00BCD4',
-        borderRadius: '12px',
-        padding: '20px',
-        marginTop: '24px',
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)',
-        fontSize: '0.85rem',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-      }}>
+      <div className='warning-card'>
         <span role="img" aria-label="warning" style={{fontSize: '1.2rem'}}>⚠️</span>
         <span>
           Caffeinated and unhealthy drinks can harm your health. Drink water instead!

@@ -30,7 +30,7 @@ const DailyGoalSettings: React.FC = () => {
     <div className="settings-section">
       <div className="settings-section-header">
         <i
-          className="pi pi-circle-fill settings-icon"
+          className="pi pi-bullseye settings-icon"
           style={{ color: '#00BCD4' }}
         ></i>
         <h3>Daily Goal</h3>
