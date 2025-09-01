@@ -3,16 +3,16 @@ const CACHE_NAME = 'droplet-cache-v3';
 const NOTIFICATION_TITLE = 'Time to Drink Water! 💧';
 const NOTIFICATION_OPTIONS = {
   body: "Don't forget to stay hydrated!",
-  icon: '/icon.svg',
-  badge: '/icon.svg',
+  icon: '/icon-192.png',
+  badge: '/icon-192.png',
   tag: 'water-reminder',
   renotify: true,
   vibrate: [200, 100, 200],
-  requireInteraction: false,
+  requireInteraction: true,
   actions: [
     {
-      action: 'open',
-      title: 'Open App',
+      action: 'drink',
+      title: '🥤 Log Water',
     },
     {
       action: 'dismiss',
@@ -21,8 +21,12 @@ const NOTIFICATION_OPTIONS = {
   ],
 };
 
-// Store for active reminders
+// Store for active reminders and their state
 const activeReminders = new Map();
+let activeTimer = null;
+let lastNotificationTime = 0;
+let currentInterval = 0;
+let isEnabled = false;
 let wakeLock = null;
 
 // Request wake lock
@@ -42,6 +46,34 @@ self.addEventListener('install', (event) => {
   // Force waiting service worker to become active
   self.skipWaiting();
 });
+
+// Function to schedule the next notification
+const scheduleNextNotification = () => {
+  if (!isEnabled || currentInterval <= 0) return;
+
+  // Clear any existing timer
+  if (activeTimer) {
+    clearTimeout(activeTimer);
+    activeTimer = null;
+  }
+
+  const now = Date.now();
+  const timeSinceLastNotification = now - lastNotificationTime;
+  const nextNotificationDelay = Math.max(
+    0,
+    (currentInterval * 60 * 1000) - timeSinceLastNotification
+  );
+
+  // Schedule next notification
+  activeTimer = setTimeout(() => {
+    self.registration.showNotification(NOTIFICATION_TITLE, NOTIFICATION_OPTIONS)
+      .then(() => {
+        lastNotificationTime = Date.now();
+        // Schedule the next notification
+        scheduleNextNotification();
+      });
+  }, nextNotificationDelay);
+};
 
 self.addEventListener('activate', (event) => {
   console.log('[ServiceWorker] Activating service worker...');
@@ -95,6 +127,8 @@ self.addEventListener('message', (event) => {
       break;
 
     case 'START_REMINDER':
+      // When starting a new reminder, calculate when the next notification should be
+      const now = Date.now();
       startReminder(message.id, message.minutes, event.source);
       break;
 
@@ -103,7 +137,21 @@ self.addEventListener('message', (event) => {
       break;
 
     case 'STOP_ALL_REMINDERS':
+      isEnabled = false;
       stopAllReminders(event.source);
+      // Reset the last notification time when stopping all reminders
+      lastNotificationTime = 0;
+      break;
+
+    case 'GET_STATUS':
+      // Respond with current reminder status
+      event.source?.postMessage({
+        type: 'REMINDER_STATUS',
+        isActive: isEnabled && activeReminders.size > 0,
+        lastNotification: lastNotificationTime,
+        nextNotification: lastNotificationTime > 0 ? 
+          lastNotificationTime + (currentInterval * 60 * 1000) : 0
+      });
       break;
   }
 });
@@ -133,30 +181,48 @@ function startReminder(id, minutes, client) {
 
   console.log(`[ServiceWorker] Starting reminder ${id} every ${minutes} minutes`);
 
-  // Minimum interval of 1 minute
-  const interval = Math.max(minutes * 60 * 1000, 60 * 1000);
+  // Store current interval
+  currentInterval = minutes;
 
-  // Create periodic notifications using setInterval
-  const timerId = setInterval(async () => {
-    await showNotification(id, minutes);
-    // Request wake lock again if needed
-    if (!wakeLock) await requestWakeLock();
-  }, interval);
+  // Calculate when the next notification should be shown
+  const now = Date.now();
+  const nextNotificationTime = lastNotificationTime > 0 ?
+    lastNotificationTime + (minutes * 60 * 1000) :
+    now + (minutes * 60 * 1000);
 
-  // Store the timer
-  activeReminders.set(id, timerId);
+  // Create timeout for next notification
+  const timerId = setTimeout(async () => {
+    // Only show notification if enabled
+    if (isEnabled) {
+      await showNotification(id, minutes);
+      lastNotificationTime = Date.now();
+      
+      // Start the regular interval after the first notification
+      const intervalId = setInterval(async () => {
+        if (isEnabled) {
+          await showNotification(id, minutes);
+          lastNotificationTime = Date.now();
+          // Request wake lock again if needed
+          if (!wakeLock) await requestWakeLock();
+        }
+      }, minutes * 60 * 1000);
+      
+      // Store the regular interval timer
+      activeReminders.set(id + '_interval', intervalId);
+    }
+  }, nextNotificationTime - now);
 
-  // Send confirmation to client
+  // Store the initial timer
+  activeReminders.set(id + '_timeout', timerId);
+  isEnabled = true;
+
+  // Send confirmation to client with next notification time
   client?.postMessage({
     type: 'REMINDER_STARTED',
     id: id,
     minutes: minutes,
+    nextNotification: nextNotificationTime
   });
-
-  // Show test notification after 1 second
-  setTimeout(() => {
-    showNotification(id, minutes);
-  }, 1000);
 }
 
 // Stop a specific reminder
@@ -180,15 +246,20 @@ function stopAllReminders(client) {
   console.log(`[ServiceWorker] Stopping all ${activeReminders.size} reminders`);
 
   activeReminders.forEach((timerId, id) => {
+    // Clear both timeout and interval timers
+    clearTimeout(timerId);
     clearInterval(timerId);
   });
 
   activeReminders.clear();
+  currentInterval = 0;
+  lastNotificationTime = 0;
 
   // Only send message if client is provided (when called directly, not from startReminder)
   if (client) {
     client.postMessage({
       type: 'ALL_REMINDERS_STOPPED',
+      timestamp: Date.now()
     });
   }
 }

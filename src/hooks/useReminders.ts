@@ -32,34 +32,69 @@ export const useReminders = () => {
     setReminders([newReminder]);
   };
 
+  const scheduleNotification = useCallback((interval: number, enabled: boolean) => {
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({
+        type: enabled ? 'START_REMINDER' : 'STOP_ALL_REMINDERS',
+        id: 'reminder-1',
+        minutes: interval
+      });
+    }
+  }, []);
+
   const toggleReminder = (id: string) => {
-    setReminders((prev) =>
-      prev.map((reminder) =>
+    setReminders((prev) => {
+      const updatedReminders = prev.map((reminder) =>
         reminder.id === id
           ? {
               ...reminder,
               enabled: !reminder.enabled,
-              lastTriggered: Date.now(),
+              lastTriggered: reminder.enabled ? undefined : Date.now(),
             }
           : reminder
-      )
-    );
+      );
+      
+      // Get the reminder that was toggled
+      const toggledReminder = updatedReminders.find(r => r.id === id);
+      if (toggledReminder) {
+        // Schedule or clear notification based on new enabled state
+        scheduleNotification(toggledReminder.interval, toggledReminder.enabled);
+      }
+      
+      return updatedReminders;
+    });
   };
 
   const updateReminderInterval = (id: string, interval: number) => {
-    // Since we're only allowing one reminder, this effectively updates the only one
-    setReminders([
-      {
+    setReminders(prev => {
+      const currentReminder = prev.find(r => r.id === id);
+      const wasEnabled = currentReminder?.enabled ?? false;
+      
+      // First stop any existing reminders
+      if (wasEnabled) {
+        scheduleNotification(0, false);
+      }
+      
+      const updatedReminder = {
         id: id,
         interval,
-        enabled: true,
-        lastTriggered: Date.now(),
-      },
-    ]);
+        enabled: wasEnabled,
+        lastTriggered: undefined // Reset the last triggered time
+      };
+      
+      // If it was enabled, schedule with new interval
+      if (wasEnabled) {
+        scheduleNotification(interval, true);
+      }
+      
+      return [updatedReminder];
+    });
   };
 
   const removeReminder = (_id: string) => {
-    // id parameter is kept for API compatibility but not used
+    // Stop any notifications first
+    scheduleNotification(0, false);
+    // Clear all reminders
     setReminders([]);
   };
 
