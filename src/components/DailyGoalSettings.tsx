@@ -17,6 +17,15 @@ const DailyGoalSettings: React.FC = () => {
     );
   };
 
+  const handleGoalChange = (value: number | null) => {
+    if (value === null) return;
+    
+    const validValue = Math.min(Math.max(value, 100), 10000);
+    setNewGoal(validValue);
+    updateDailyGoal(validValue);
+    showSuccessToast(validValue);
+  };
+
   return (
     <div className="settings-section">
       <div className="settings-section-header">
@@ -28,16 +37,23 @@ const DailyGoalSettings: React.FC = () => {
       </div>
 
       <div className="goal-input-container">
-        <InputNumber
-          id="goal"
-          value={newGoal}
-          onValueChange={(e) => setNewGoal(e.value as number | null)}
-          min={1}
-          step={100}
-          showButtons={false}
-          className="goal-input"
-          suffix={unit === 'ml' ? ' ml' : ' oz'}
-        />
+        <div className="goal-input-wrapper">
+          <InputNumber
+            id="goal"
+            value={newGoal}
+            onValueChange={(e) => {
+              const value = e.value as number | null;
+              handleGoalChange(value);
+            }}
+            min={100}
+            max={10000}
+            step={unit === 'ml' ? 100 : 1}
+            showButtons={false}
+            className="goal-input"
+            maxLength={6}
+          />
+          <span className="goal-unit">{unit}</span>
+        </div>
       </div>
 
       <div className="goal-preset-chips">
@@ -47,11 +63,7 @@ const DailyGoalSettings: React.FC = () => {
             className={`goal-preset-chip ${
               newGoal === amount ? 'selected' : ''
             }`}
-            onClick={() => {
-              setNewGoal(amount);
-              updateDailyGoal(amount);
-              showSuccessToast(amount);
-            }}
+            onClick={() => handleGoalChange(amount)}
           >
             {formatAmount(amount)}
           </div>

@@ -138,7 +138,7 @@ const AddWaterIntake: React.FC = () => {
         <div className="custom-amount">
           <div className="amount-input-container">
             <Button
-              className="p-button-text"
+              className="p-button-text amount-adjust-btn"
               onClick={() =>
                 setSelectedAmount((prev) =>
                   Math.max(
@@ -148,24 +148,36 @@ const AddWaterIntake: React.FC = () => {
                 )
               }
             >
-            <i className="pi pi-minus"></i>
+              <i className="pi pi-minus"></i>
             </Button>
             <InputNumber
               value={selectedAmount}
-              onValueChange={(e) => setSelectedAmount(e.value as number)}
+              onValueChange={(e) => {
+                const value = e.value as number;
+                if (value >= (unit === 'ml' ? 50 : 2)) {
+                  setSelectedAmount(value);
+                }
+              }}
               min={unit === 'ml' ? 50 : 2}
+              max={unit === 'ml' ? 3000 : 101}
               step={unit === 'ml' ? 50 : 1}
               showButtons={false}
               suffix={unit === 'ml' ? ' ml' : ' oz'}
               className="amount-input"
+              maxLength={5}
             />
             <Button
-              className="p-button-text"
+              className="p-button-text amount-adjust-btn"
               onClick={() =>
-                setSelectedAmount((prev) => prev + (unit === 'ml' ? 50 : 1))
+                setSelectedAmount((prev) => 
+                  Math.min(
+                    unit === 'ml' ? 3000 : 101,
+                    prev + (unit === 'ml' ? 50 : 1)
+                  )
+                )
               }
             >
-            <i className="pi pi-plus"></i>
+              <i className="pi pi-plus"></i>
             </Button>
           </div>
         </div>

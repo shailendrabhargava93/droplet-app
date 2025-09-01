@@ -68,9 +68,9 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({ children }) => {
   // Format amount based on current unit
   const formatAmount = (amount: number): string => {
     if (unit === 'ml') {
-      return `${amount}ml`;
+      return `${amount} ml`;
     } else {
-      return `${amount}oz`;
+      return `${amount} oz`;
     }
   };
 

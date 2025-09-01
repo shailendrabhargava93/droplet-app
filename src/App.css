@@ -32,11 +32,47 @@
   padding-bottom: 80px; /* Space for bottom navigation */
 }
 
+.today-page {
+  max-width: 500px;
+  margin: 0 auto;
+  width: 100%;
+}
+
 .container {
   width: 100%;
   max-width: 500px;
   margin: 0 auto;
   padding: 1rem;
+}
+
+.daily-stats-container {
+  margin: 16px 0;
+  width: 100%;
+}
+
+.stats-label {
+  font-size: 1rem;
+  color: #9ba3af;
+  margin-bottom: 8px;
+}
+
+.stats-value {
+  font-size: 2rem;
+  font-weight: 600;
+  color: #ffffff;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+@media screen and (max-width: 380px) {
+  .stats-value {
+    font-size: 1.75rem;
+  }
+  
+  .stats-label {
+    font-size: 0.9rem;
+  }
 }
 
 /* PrimeReact customizations */
@@ -189,6 +225,57 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   padding: 1rem 0;
   margin-bottom: 1rem;
+}
+
+.daily-stats-container {
+  margin: 16px 0;
+}
+
+.daily-stats-card {
+  background-color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  padding: 20px;
+}
+
+.stats-item {
+  padding: 20px;
+  border-radius: 12px;
+  background: #00bcd4;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.stats-label {
+  font-size: 0.9rem;
+  color: #374151;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.stats-value {
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: #ffffff;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+@media screen and (max-width: 380px) {
+  .stats-value {
+    font-size: 1.75rem;
+  }
+  
+  .stats-label {
+    font-size: 0.9rem;
+  }
 }
 
 .app-header {
@@ -589,17 +676,45 @@
   border: 1px solid #ddd;
   border-radius: 8px;
   overflow: hidden;
+  margin: 0 8px;
 }
 
 .amount-input {
   flex: 1;
   text-align: center;
   font-size: 1.2rem;
+  min-width: 0;
 }
 
 .amount-input .p-inputnumber-input {
   text-align: center;
   border: none;
+  width: 100%;
+}
+
+.amount-adjust-btn {
+  min-width: 40px !important;
+  height: 40px !important;
+  border-radius: 0 !important;
+}
+
+.amount-adjust-btn .pi {
+  font-size: 0.9rem;
+}
+
+@media screen and (max-width: 380px) {
+  .amount-input {
+    font-size: 1.1rem;
+  }
+  
+  .amount-adjust-btn {
+    min-width: 36px !important;
+    height: 36px !important;
+  }
+
+  .amount-adjust-btn .pi {
+    font-size: 0.8rem;
+  }
 }
 
 .add-drink-submit-btn {
@@ -967,6 +1082,18 @@
   margin: 10px 0;
   max-width: 250px;
   margin-left: 0;
+  width: 100%;
+}
+
+.goal-input-wrapper {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 0 10px;
 }
 
 .goal-input {
@@ -978,15 +1105,39 @@
   text-align: left;
   font-weight: bold;
   color: #00bcd4;
-  padding: 6px 10px;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
+  padding: 6px 45px 6px 10px;
+  border: none;
+  width: 100%;
+  min-width: 0;
+}
+
+.goal-unit {
+  color: #00bcd4;
+  font-size: 1.1rem;
+  pointer-events: none;
+  user-select: none;
+  font-weight: 500;
+  position: absolute;
+  right: 10px;
 }
 
 @media screen and (max-width: 380px) {
+  .goal-input-container {
+    max-width: 100%;
+  }
+  
   .goal-input .p-inputnumber-input {
-    font-size: 1.2rem;
-    padding: 8px;
+    font-size: 1.1rem;
+    padding: 8px 40px 8px 8px;
+  }
+
+  .goal-unit {
+    font-size: 1rem;
+    right: 8px;
+  }
+
+  .goal-input-wrapper {
+    padding: 0 8px;
   }
 }
 
@@ -1006,7 +1157,7 @@
 }
 
 .goal-preset-chip {
-  padding: 8px 16px;
+  padding: 5px 10px;
   border-radius: 20px;
   background-color: #f0f0f0;
   color: #555;

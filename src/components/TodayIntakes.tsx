@@ -1,6 +1,7 @@
 import React from 'react';
 import { useWaterContext } from '../context/WaterContext';
 import { useUnitContext } from '../context/UnitContext';
+import DailyStats from './DailyStats';
 
 const TodayIntakes: React.FC = () => {
   const { formatAmount } = useUnitContext();
@@ -61,24 +62,7 @@ const TodayIntakes: React.FC = () => {
 
   return (
     <div className="today-page">
-      <div style={{
-        background: 'transparent',
-        color: '#00BCD4',
-        borderRadius: '8px',
-        padding: '12px',
-        marginBottom: '24px',
-        border: '1px solid #00BCD4',
-        fontSize: '0.8rem',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '10px',
-      }}>
-        <span role="img" aria-label="warning" style={{fontSize: '1.1rem'}}>⚠️</span>
-        <span>
-          Caffeinated and unhealthy drinks can harm your health. Drink water instead!
-        </span>
-      </div>
-
+      <DailyStats />
       <div id="today-intakes" className="today-intakes-card">
         <h2 className="today-drinks-title">Today's drinks</h2>
 
@@ -118,13 +102,28 @@ const TodayIntakes: React.FC = () => {
         </div>
       ) : (
         <div className="no-drinks-message">
-          <i
-          className="pi pi-info-circle settings-icon"
-        ></i>
+          <i className="pi pi-info-circle settings-icon"></i>
           <p>No drinks added today</p>
         </div>
       )}
-    </div>
+      </div>
+
+      <div style={{
+        color: '#00BCD4',
+        borderRadius: '12px',
+        padding: '20px',
+        marginTop: '24px',
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)',
+        fontSize: '0.85rem',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+      }}>
+        <span role="img" aria-label="warning" style={{fontSize: '1.2rem'}}>⚠️</span>
+        <span>
+          Caffeinated and unhealthy drinks can harm your health. Drink water instead!
+        </span>
+      </div>
     </div>
   );
 };
