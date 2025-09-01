@@ -1,4 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
+import { 
+  areNotificationsSupported, 
+  executeFallbackNotification,
+  isIOS,
+  isPWA,
+  isMobile,
+  getNotificationCapabilities
+} from '../utils/mobileNotifications';
 
 interface Reminder {
   id: string;
@@ -213,10 +221,21 @@ export const useNotifications = () => {
     }
   }, []);
 
+  // Device notification capabilities status
+  const [deviceCapabilities, setDeviceCapabilities] = useState(() => getNotificationCapabilities());
+  const [canUseNotifications, setCanUseNotifications] = useState(() => areNotificationsSupported());
+
   // Request notification permission
   const requestPermission = async () => {
-    if (!('Notification' in window)) {
-      console.error('Notifications not supported');
+    if (!areNotificationsSupported()) {
+      console.log('Notifications not supported on this device/browser');
+      
+      // For iOS, show a message about installing as PWA
+      if (isIOS() && !isPWA()) {
+        return 'denied' as NotificationPermission;
+      }
+      
+      // For other devices, return denied
       return 'denied' as NotificationPermission;
     }
 
@@ -225,6 +244,10 @@ export const useNotifications = () => {
       const permission = await Notification.requestPermission();
       console.log('Permission result:', permission);
       setPermissionState(permission);
+      
+      // Update capabilities info
+      setDeviceCapabilities(getNotificationCapabilities());
+      
       return permission;
     } catch (error) {
       console.error('Error requesting notification permission:', error);
@@ -234,64 +257,81 @@ export const useNotifications = () => {
 
   // Send a direct notification (not using service worker)
   const sendNotification = (title: string, options?: NotificationOptions) => {
-    if (!('Notification' in window) || Notification.permission !== 'granted') {
-      console.warn('Cannot send notification: permission not granted');
-      return null;
-    }
+    // Check if standard notifications are available
+    if (areNotificationsSupported() && Notification.permission === 'granted') {
+      try {
+        console.log('Sending standard notification:', title);
+        const notification = new Notification(title, {
+          icon: '/icon-192.png',
+          badge: '/icon-192.png',
+          requireInteraction: true,
+          ...options,
+        });
 
-    try {
-      console.log('Sending direct notification:', title);
-      const notification = new Notification(title, {
-        icon: '/icon-192.png',
-        badge: '/icon-192.png',
-        requireInteraction: true,
-        ...options,
-      });
+        notification.onclick = () => {
+          window.focus();
+          notification.close();
+        };
 
-      notification.onclick = () => {
-        window.focus();
-        notification.close();
-      };
-
-      return notification;
-    } catch (error) {
-      console.error('Error sending notification:', error);
+        return notification;
+      } catch (error) {
+        console.error('Error sending notification:', error);
+        // Fall back to alternative notification
+        executeFallbackNotification(title, options?.body);
+        return null;
+      }
+    } else {
+      // Use fallback notification for unsupported browsers (especially mobile)
+      console.log('Using fallback notification mechanism');
+      executeFallbackNotification(title, options?.body);
       return null;
     }
   };
 
   // Schedule a reminder using the service worker
   const scheduleReminder = (interval: number) => {
-    if (!('Notification' in window) || Notification.permission !== 'granted') {
-      console.warn('Cannot schedule reminder: notifications not granted');
-      return false;
-    }
+    // For standard notification-supporting browsers
+    if (areNotificationsSupported() && Notification.permission === 'granted') {
+      if (!swReady || !navigator.serviceWorker.controller) {
+        console.error('Service worker not ready. Cannot schedule reminders.');
+        return false;
+      }
 
-    if (!swReady || !navigator.serviceWorker.controller) {
-      console.error('Service worker not ready. Cannot schedule reminders.');
-      return false;
-    }
+      try {
+        console.log(
+          `Scheduling reminder every ${interval} minutes using service worker`
+        );
 
-    try {
-      console.log(
-        `Scheduling reminder every ${interval} minutes using service worker`
-      );
+        const reminderId = `reminder-${Date.now()}`;
 
-      const reminderId = `reminder-${Date.now()}`;
+        // Send message to service worker to start the reminder
+        navigator.serviceWorker.controller.postMessage({
+          type: 'START_REMINDER',
+          id: reminderId,
+          minutes: interval,
+        });
 
-      // Send message to service worker to start the reminder
-      navigator.serviceWorker.controller.postMessage({
-        type: 'START_REMINDER',
-        id: reminderId,
-        minutes: interval,
-      });
-
-      // Don't show a notification here - the service worker will handle this
-      // and send back confirmation messages
-
+        // Don't show a notification here - the service worker will handle this
+        // and send back confirmation messages
+        return true;
+      } catch (error) {
+        console.error('Error scheduling reminder:', error);
+        return false;
+      }
+    } 
+    // For mobile browsers without notification support (e.g. iOS Safari)
+    else if (isMobile()) {
+      console.log(`Setting up fallback reminders for mobile browser`);
+      
+      // Set up a custom event for handling this case
+      window.dispatchEvent(new CustomEvent('setupMobileFallbackReminder', { 
+        detail: { interval } 
+      }));
+      
       return true;
-    } catch (error) {
-      console.error('Error scheduling reminder:', error);
+    } 
+    else {
+      console.warn('Cannot schedule reminder: notifications not supported or permission not granted');
       return false;
     }
   };
@@ -303,5 +343,9 @@ export const useNotifications = () => {
     sendNotification,
     scheduleReminder,
     pingServiceWorker,
+    deviceCapabilities,
+    canUseNotifications: areNotificationsSupported(),
+    isIOSDevice: isIOS(),
+    isPWAMode: isPWA()
   };
 };

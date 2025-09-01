@@ -17,7 +17,18 @@ const ReminderSettings: React.FC = () => {
     const saved = localStorage.getItem('remindersEnabled');
     return saved ? JSON.parse(saved) : false;
   });
-  const [selectedFrequency, setSelectedFrequency] = useState<number>(30);
+  const [selectedFrequency, setSelectedFrequency] = useState<number>(() => {
+    // Initialize from reminders if available
+    const savedReminders = localStorage.getItem('reminders');
+    if (savedReminders) {
+      const parsedReminders = JSON.parse(savedReminders);
+      if (parsedReminders.length > 0) {
+        return parsedReminders[0].interval;
+      }
+    }
+    return 30; // Default value
+  });
+  const [showFrequencyDropdown, setShowFrequencyDropdown] = useState<boolean>(false);
   const toast = useToast();
 
   const frequencyOptions: FrequencyOption[] = [
@@ -107,10 +118,19 @@ const ReminderSettings: React.FC = () => {
         }
       }
 
-      // Request notification permission
-      const permission = await requestPermission();
+      // Check current permission state before requesting
+      let permissionGranted = false;
+      
+      // Only ask for permission if it's not already granted or denied
+      if (Notification.permission === 'granted') {
+        permissionGranted = true;
+      } else if (Notification.permission === 'default') {
+        // Request notification permission only if not yet decided
+        const permission = await requestPermission();
+        permissionGranted = permission === 'granted';
+      }
 
-      if (permission === 'granted') {
+      if (permissionGranted) {
         setRemindersEnabled(true);
 
         // Only process reminders if we weren't already enabled
@@ -157,6 +177,9 @@ const ReminderSettings: React.FC = () => {
     }
   };
 
+  // Get device notification capability information
+  const { isIOSDevice, isPWAMode, canUseNotifications } = useNotifications();
+
   return (
     <div className="settings-section">
       <div className="settings-section-header">
@@ -166,6 +189,21 @@ const ReminderSettings: React.FC = () => {
         ></i>
         <h3>Reminder</h3>
       </div>
+      
+      {/* Device notification support information */}
+      {isIOSDevice && !isPWAMode && (
+        <div className="notification-support-info">
+          <i className="pi pi-info-circle" style={{ marginRight: '8px', color: '#00BCD4' }}></i>
+          <p>For the best experience with notifications on iOS, please install this app to your home screen.</p>
+        </div>
+      )}
+      
+      {!canUseNotifications && (
+        <div className="notification-support-info">
+          <i className="pi pi-info-circle" style={{ marginRight: '8px', color: '#ff9800' }}></i>
+          <p>Your browser has limited notification support. The app will use in-app reminders when possible.</p>
+        </div>
+      )}
 
       <div className="setting-row">
         <div className="setting-label">
@@ -188,6 +226,13 @@ const ReminderSettings: React.FC = () => {
                   <i className="pi pi-clock" style={{ marginRight: '8px' }}></i>
                   Every {reminders[0].interval} minutes
                 </div>
+                <button 
+                  className="p-button p-button-text p-button-sm" 
+                  onClick={() => setShowFrequencyDropdown(true)}
+                >
+                  <i className="pi pi-pencil" style={{ marginRight: '4px' }}></i>
+                  Change
+                </button>
               </div>
             ) : (
               <div className="reminder-item">
@@ -195,49 +240,70 @@ const ReminderSettings: React.FC = () => {
                   <i className="pi pi-clock" style={{ marginRight: '8px' }}></i>
                   Every {selectedFrequency} minutes
                 </div>
+                <button 
+                  className="p-button p-button-text p-button-sm" 
+                  onClick={() => setShowFrequencyDropdown(true)}
+                >
+                  <i className="pi pi-pencil" style={{ marginRight: '4px' }}></i>
+                  Change
+                </button>
               </div>
             )}
           </div>
 
-          <div className="frequency-selection">
-            <p className="mb-2">Change reminder frequency:</p>
-            <Dropdown
-              value={selectedFrequency}
-              options={frequencyOptions}
-              onChange={(e) => {
-                const interval = e.value;
-                setSelectedFrequency(interval);
-                if (Notification.permission === 'granted') {
-                  // Update the reminder
-                  addReminder(interval);
+          {showFrequencyDropdown && (
+            <div className="frequency-selection">
+              <p className="mb-2">Select new reminder frequency:</p>
+              <Dropdown
+                value={selectedFrequency}
+                options={frequencyOptions}
+                onChange={(e) => {
+                  const interval = e.value;
+                  setSelectedFrequency(interval);
+                  
+                  if (Notification.permission === 'granted') {
+                    // Update the reminder
+                    addReminder(interval);
 
-                  // Check if service worker is ready
-                  if (swReady && navigator.serviceWorker.controller) {
-                    // Schedule with service worker
-                    navigator.serviceWorker.controller.postMessage({
-                      type: 'START_REMINDER',
-                      id: `reminder-${Date.now()}`,
-                      minutes: interval,
-                    });
+                    // Check if service worker is ready
+                    if (swReady && navigator.serviceWorker.controller) {
+                      // Schedule with service worker
+                      navigator.serviceWorker.controller.postMessage({
+                        type: 'START_REMINDER',
+                        id: `reminder-${Date.now()}`,
+                        minutes: interval,
+                      });
 
-                    // Don't show toast here - the service worker will send a message that will trigger the toast
+                      // Hide dropdown after successful update
+                      setShowFrequencyDropdown(false);
+                      
+                      // Don't show toast here - the service worker will send a message that will trigger the toast
+                    } else {
+                      toast.showWarn(
+                        'Service Worker Not Ready',
+                        'Please try reloading the page to enable reminders'
+                      );
+                    }
                   } else {
                     toast.showWarn(
-                      'Service Worker Not Ready',
-                      'Please try reloading the page to enable reminders'
+                      'Notification Permission Required',
+                      'Please allow notifications to set reminders'
                     );
                   }
-                } else {
-                  toast.showWarn(
-                    'Notification Permission Required',
-                    'Please allow notifications to set reminders'
-                  );
-                }
-              }}
-              placeholder="Select reminder frequency"
-              className="w-full"
-            />
-          </div>
+                }}
+                placeholder="Select reminder frequency"
+                className="w-full mb-2"
+              />
+              <div className="frequency-actions">
+                <button 
+                  className="p-button p-button-outlined p-button-sm" 
+                  onClick={() => setShowFrequencyDropdown(false)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
 
           <p className="reminder-help-text">
             You'll receive notifications to help you stay hydrated.

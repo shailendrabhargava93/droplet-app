@@ -1,0 +1,76 @@
+.in-app-notification-banner {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    max-width: 400px;
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    padding: 16px;
+    z-index: 9999;
+    animation: slideInDown 0.3s forwards;
+    cursor: pointer;
+  }
+  
+  .notification-icon {
+    font-size: 24px;
+    margin-right: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    background-color: #e3f2fd;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  
+  .notification-content {
+    flex: 1;
+  }
+  
+  .notification-title {
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: #333;
+    font-size: 16px;
+  }
+  
+  .notification-body {
+    font-size: 14px;
+    color: #666;
+  }
+  
+  .hydration-notification-toast {
+    background-color: #e3f2fd;
+    border-left: 6px solid #00BCD4;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+  
+  .hydration-notification-toast .p-toast-message-content {
+    padding: 12px;
+  }
+  
+  @keyframes slideInDown {
+    from {
+      transform: translate(-50%, -100%);
+      opacity: 0;
+    }
+    to {
+      transform: translate(-50%, 0);
+      opacity: 1;
+    }
+  }
+  
+  /* For PWA installed mode - add safe area padding */
+  @media all and (display-mode: standalone) {
+    .in-app-notification-banner {
+      top: calc(20px + env(safe-area-inset-top));
+    }
+  }
+  

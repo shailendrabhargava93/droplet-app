@@ -1,11 +1,18 @@
 import React, { useState } from 'react';
 import { useWaterContext } from '../context/WaterContext';
 import { Button } from 'primereact/button';
+import { Dialog } from 'primereact/dialog';
+import { useNotifications } from '../hooks/useReminders';
+import { useToast } from '../context/ToastContext';
 import '../styles/getStarted.css';
 
 const GetStartedScreen: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
   const { updateDailyGoal } = useWaterContext();
+  const { requestPermission } = useNotifications();
+  const toast = useToast();
   const [currentStep, setCurrentStep] = useState(0);
+  const [showPermissionDialog, setShowPermissionDialog] = useState(false);
+  const [permissionAsked, setPermissionAsked] = useState(false);
 
   const DropletLogo = () => (
     <div className="logo-container">
@@ -37,15 +44,53 @@ const GetStartedScreen: React.FC<{ onComplete: () => void }> = ({ onComplete }) 
     }
   ];
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     // Set initial daily goal
     updateDailyGoal(2000);
     
+    // Check if we've already asked for permission
+    if (!permissionAsked && 'Notification' in window && Notification.permission === 'default') {
+      setShowPermissionDialog(true);
+    } else {
+      // If we've already asked or notifications aren't supported, complete onboarding
+      finishOnboarding();
+    }
+  };
+
+  const finishOnboarding = () => {
     // Mark onboarding as complete
     localStorage.setItem('onboardingComplete', 'true');
     
     // Call the completion callback
     onComplete();
+  };
+
+  const handlePermissionRequest = async () => {
+    setPermissionAsked(true);
+    setShowPermissionDialog(false);
+    
+    try {
+      const permission = await requestPermission();
+      
+      if (permission === 'granted') {
+        toast.showSuccess(
+          'Notifications Enabled', 
+          'You will now receive hydration reminders!'
+        );
+      } else {
+        toast.showInfo(
+          'Notifications Disabled',
+          'You can enable reminders later in Settings'
+        );
+      }
+      
+      // Complete onboarding regardless of permission result
+      finishOnboarding();
+    } catch (error) {
+      console.error('Error requesting notification permission:', error);
+      // Complete onboarding even if there's an error
+      finishOnboarding();
+    }
   };
 
   const nextStep = () => {
@@ -108,6 +153,41 @@ const GetStartedScreen: React.FC<{ onComplete: () => void }> = ({ onComplete }) 
           </div>
         </div>
       </div>
+
+      {/* Notification Permission Dialog */}
+      <Dialog
+        visible={showPermissionDialog}
+        onHide={() => finishOnboarding()}
+        header="Enable Notifications"
+        draggable={false}
+        resizable={false}
+        className="notification-dialog"
+        style={{ width: '90%', maxWidth: '450px' }}
+        footer={
+          <div className="dialog-footer">
+            <Button 
+              label="No Thanks" 
+              className="p-button-text" 
+              onClick={() => finishOnboarding()}
+            />
+            <Button 
+              label="Enable Notifications" 
+              onClick={handlePermissionRequest} 
+              style={{ backgroundColor: '#00BCD4', border: 'none' }}
+            />
+          </div>
+        }
+      >
+        <div className="notification-dialog-content">
+          <i className="pi pi-bell" style={{ fontSize: '2rem', color: '#00BCD4', marginBottom: '1rem' }}></i>
+          <p>
+            Would you like to receive reminders to stay hydrated throughout the day?
+          </p>
+          <p>
+            You can always change this setting later in the app.
+          </p>
+        </div>
+      </Dialog>
     </div>
   );
 };

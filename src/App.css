@@ -1330,6 +1330,34 @@
 }
 
 .reminder-time {
+  flex: 1;
+  font-weight: 500;
+}
+
+.p-button.p-button-text.p-button-sm {
+  padding: 0.4rem;
+  font-size: 0.875rem;
+  color: #00BCD4;
+}
+
+.p-button.p-button-text.p-button-sm:hover {
+  background-color: rgba(0, 188, 212, 0.1);
+}
+
+.frequency-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.5rem;
+}
+
+.frequency-selection {
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background-color: #f0f7f8;
+  border-radius: 8px;
+}
+
+.reminder-time {
   display: flex;
   align-items: center;
   font-size: 1rem;
@@ -1366,6 +1394,22 @@
   color: #666;
   margin-top: 1rem;
   margin-bottom: 0.5rem;
+}
+
+.notification-support-info {
+  display: flex;
+  align-items: flex-start;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 12px;
+  margin: 12px 0;
+  font-size: 0.85rem;
+  color: #555;
+}
+
+.notification-support-info p {
+  margin: 0;
+  line-height: 1.4;
 }
 
 /* Settings icon styles */

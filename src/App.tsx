@@ -11,6 +11,8 @@ import { UnitProvider } from './context/UnitContext';
 import { Toaster } from 'react-hot-toast';
 import Header from './components/Header';
 import GetStartedScreen from './components/GetStartedScreen';
+import InAppNotification from './components/InAppNotification';
+import MobileFallbackReminder from './components/MobileFallbackReminder';
 
 function App() {
   const [activeTab, setActiveTab] = useState<'stats' | 'add' | 'settings'>('stats');
@@ -148,6 +150,10 @@ function App() {
                   },
                 }}
               />
+              
+              {/* Mobile-specific notification components */}
+              <InAppNotification onAction={() => setActiveTab('add')} />
+              <MobileFallbackReminder onReminderTriggered={() => console.log('Mobile reminder triggered')} />
             </>
           )}
         </UnitProvider>
