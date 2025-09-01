@@ -56,10 +56,6 @@ const PWAInstallPrompt: React.FC = () => {
         onClick={handleInstallClick}
         className="p-button-outlined"
         style={{ 
-          position: 'fixed',
-          bottom: '80px',
-          right: '20px',
-          zIndex: 1000,
           backgroundColor: '#00BCD4',
           color: 'white',
           border: 'none'

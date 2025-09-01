@@ -18,23 +18,23 @@ const TodayIntakes: React.FC = () => {
     );
   });
 
-  // Get beverage icon based on type
-  const getBeverageIconSrc = (type: string) => {
+  // Get beverage emoji based on type
+  const getBeverageEmoji = (type: string) => {
     switch (type) {
       case 'water':
-        return 'https://cdn-icons-png.flaticon.com/512/824/824239.png';
+        return '🥛';
       case 'coffee':
-        return 'https://cdn-icons-png.flaticon.com/512/751/751621.png';
+        return '☕';
       case 'tea':
-        return 'https://cdn-icons-png.flaticon.com/512/12257/12257379.png';
+        return '🍵';
       case 'juice':
-        return 'https://cdn-icons-png.flaticon.com/512/3165/3165589.png';
+        return '🧃';
       case 'milk':
-        return 'https://cdn-icons-png.flaticon.com/512/3528/3528201.png';
+        return '🍶';
       case 'soda':
-        return 'https://cdn-icons-png.flaticon.com/512/734/734748.png';
+        return '🥤';
       default:
-        return 'https://cdn-icons-png.flaticon.com/512/824/824239.png';
+        return '🥛';
     }
   };
 
@@ -74,13 +74,9 @@ const TodayIntakes: React.FC = () => {
                 <div
                   className={`drink-icon slim ${getBeverageClass(
                     intake.beverageType
-                  )}`}
+                  )} emoji-icon`}
                 >
-                  <img
-                    src={getBeverageIconSrc(intake.beverageType)}
-                    alt={intake.beverageType}
-                    className="drink-svg-icon small"
-                  />
+                  {getBeverageEmoji(intake.beverageType)}
                 </div>
               </div>
               <div className="drink-details">

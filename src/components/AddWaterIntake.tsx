@@ -24,43 +24,43 @@ const AddWaterIntake: React.FC = () => {
     {
       id: 'water',
       name: 'Water',
-      icon: '',
-      imageUrl: 'https://cdn-icons-png.flaticon.com/512/824/824239.png',
+      icon: '🥛',
+      imageUrl: '',
       iconClass: 'beverage-water',
     },
     {
       id: 'coffee',
       name: 'Coffee',
-      icon: '',
-      imageUrl: 'https://cdn-icons-png.flaticon.com/512/751/751621.png',
+      icon: '☕',
+      imageUrl: '',
       iconClass: 'beverage-coffee',
     },
     {
       id: 'tea',
       name: 'Tea',
-      icon: '',
-      imageUrl: 'https://cdn-icons-png.flaticon.com/512/12257/12257379.png',
+      icon: '🍵',
+      imageUrl: '',
       iconClass: 'beverage-tea',
     },
     {
       id: 'juice',
       name: 'Juice',
-      icon: '',
-      imageUrl: 'https://cdn-icons-png.flaticon.com/512/3165/3165589.png',
+      icon: '🧃',
+      imageUrl: '',
       iconClass: 'beverage-juice',
     },
     {
       id: 'milk',
       name: 'Milk',
-      icon: '',
-      imageUrl: 'https://cdn-icons-png.flaticon.com/512/3528/3528201.png',
+      icon: '🍶',
+      imageUrl: '',
       iconClass: 'beverage-milk',
     },
     {
       id: 'soda',
       name: 'Soda',
-      icon: '',
-      imageUrl: 'https://cdn-icons-png.flaticon.com/512/734/734748.png',
+      icon: '🥤',
+      imageUrl: '',
       iconClass: 'beverage-soda',
     },
   ];
@@ -105,12 +105,8 @@ const AddWaterIntake: React.FC = () => {
               }`}
               onClick={() => handleDrinkSelection(drink)}
             >
-              <div className={`drink-icon ${drink.iconClass}`}>
-                <img
-                  src={drink.imageUrl}
-                  alt={drink.name}
-                  className="drink-svg-icon"
-                />
+              <div className={`drink-icon ${drink.iconClass} emoji-icon`}>
+                {drink.icon}
               </div>
               <span className="drink-name">{drink.name}</span>
             </div>

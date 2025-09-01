@@ -11,7 +11,6 @@ import { UnitProvider } from './context/UnitContext';
 import { Toaster } from 'react-hot-toast';
 import Header from './components/Header';
 import GetStartedScreen from './components/GetStartedScreen';
-import PWAInstallPrompt from './components/PWAInstallPrompt';
 
 function App() {
   const [activeTab, setActiveTab] = useState<'stats' | 'add' | 'settings'>('stats');
@@ -118,7 +117,6 @@ function App() {
                 </main>
 
                 <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
-                <PWAInstallPrompt />
               </div>
               <Toaster
                 position="bottom-center"
