@@ -3,6 +3,7 @@ import { useNotifications, useReminders } from '../hooks/useReminders';
 import { InputSwitch } from 'primereact/inputswitch';
 import { Dropdown } from 'primereact/dropdown';
 import { useToast } from '../context/ToastContext';
+import { areNotificationsSupported } from '../utils/mobileNotifications';
 
 interface FrequencyOption {
   label: string;
@@ -178,7 +179,8 @@ const ReminderSettings: React.FC = () => {
   };
 
   // Get device notification capability information
-  const { isIOSDevice, isPWAMode, canUseNotifications } = useNotifications();
+  const { isIOSDevice, isPWAMode } = useNotifications();
+  const canUseNotifications = areNotificationsSupported();
 
   return (
     <div className="settings-section">

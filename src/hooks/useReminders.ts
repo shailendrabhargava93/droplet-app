@@ -223,7 +223,6 @@ export const useNotifications = () => {
 
   // Device notification capabilities status
   const [deviceCapabilities, setDeviceCapabilities] = useState(() => getNotificationCapabilities());
-  const [canUseNotifications, setCanUseNotifications] = useState(() => areNotificationsSupported());
 
   // Request notification permission
   const requestPermission = async () => {
@@ -344,7 +343,6 @@ export const useNotifications = () => {
     scheduleReminder,
     pingServiceWorker,
     deviceCapabilities,
-    canUseNotifications: areNotificationsSupported(),
     isIOSDevice: isIOS(),
     isPWAMode: isPWA()
   };
