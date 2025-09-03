@@ -303,11 +303,20 @@ export const useNotifications = () => {
 
         const reminderId = `reminder-${Date.now()}`;
 
+        // Get start and end times from local storage if available
+        let startTimeStr = localStorage.getItem('reminderStartTime');
+        let endTimeStr = localStorage.getItem('reminderEndTime');
+        
+        const startTime = startTimeStr ? new Date(startTimeStr) : null;
+        const endTime = endTimeStr ? new Date(endTimeStr) : null;
+
         // Send message to service worker to start the reminder
         navigator.serviceWorker.controller.postMessage({
           type: 'START_REMINDER',
           id: reminderId,
           minutes: interval,
+          startTime: startTime ? startTime.toISOString() : undefined,
+          endTime: endTime ? endTime.toISOString() : undefined
         });
 
         // Don't show a notification here - the service worker will handle this

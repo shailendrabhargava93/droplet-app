@@ -129,7 +129,7 @@ self.addEventListener('message', (event) => {
     case 'START_REMINDER':
       // When starting a new reminder, calculate when the next notification should be
       const now = Date.now();
-      startReminder(message.id, message.minutes, event.source);
+      startReminder(message.id, message.minutes, event.source, message.startTime, message.endTime);
       break;
 
     case 'STOP_REMINDER':
@@ -175,15 +175,56 @@ async function showNotification(id, minutes) {
   }
 }
 
-function startReminder(id, minutes, client) {
+function startReminder(id, minutes, client, startTimeStr, endTimeStr) {
   // Stop any existing reminders
   stopAllReminders();
 
   console.log(`[ServiceWorker] Starting reminder ${id} every ${minutes} minutes`);
+  console.log(`[ServiceWorker Debug] Start time: ${startTimeStr}, End time: ${endTimeStr}`);
 
   // Store current interval
   currentInterval = minutes;
+  isEnabled = true;
 
+  // Parse start and end times if provided
+  let startTime = startTimeStr ? new Date(startTimeStr) : null;
+  let endTime = endTimeStr ? new Date(endTimeStr) : null;
+  
+  console.log(`[ServiceWorker Debug] Parsed start time: ${startTime?.toLocaleTimeString()}`);
+  console.log(`[ServiceWorker Debug] Parsed end time: ${endTime?.toLocaleTimeString()}`);
+  
+  // Function to check if current time is within reminder hours
+  const isWithinReminderHours = () => {
+    if (!startTime || !endTime) {
+      console.log('[ServiceWorker Debug] No start/end time restrictions');
+      return true;
+    }
+    
+    const now = new Date();
+    
+    // Extract only time component (ignore date part)
+    const currentHour = now.getHours();
+    const currentMinutes = now.getMinutes();
+    
+    const startHour = startTime.getHours();
+    const startMinutes = startTime.getMinutes();
+    
+    const endHour = endTime.getHours();
+    const endMinutes = endTime.getMinutes();
+    
+    // Convert to minutes for easier comparison
+    const currentTimeInMinutes = currentHour * 60 + currentMinutes;
+    const startTimeInMinutes = startHour * 60 + startMinutes;
+    const endTimeInMinutes = endHour * 60 + endMinutes;
+    
+    const isWithin = currentTimeInMinutes >= startTimeInMinutes && currentTimeInMinutes <= endTimeInMinutes;
+    
+    console.log(`[ServiceWorker Debug] Current time: ${now.toLocaleTimeString()}`);
+    console.log(`[ServiceWorker Debug] Is within hours? ${isWithin} (${startTimeInMinutes}-${endTimeInMinutes}, current: ${currentTimeInMinutes})`);
+    
+    return isWithin;
+  };
+  
   // Calculate when the next notification should be shown
   const now = Date.now();
   const nextNotificationTime = lastNotificationTime > 0 ?
@@ -191,37 +232,98 @@ function startReminder(id, minutes, client) {
     now + (minutes * 60 * 1000);
 
   // Create timeout for next notification
-  const timerId = setTimeout(async () => {
-    // Only show notification if enabled
-    if (isEnabled) {
-      await showNotification(id, minutes);
-      lastNotificationTime = Date.now();
-      
-      // Start the regular interval after the first notification
-      const intervalId = setInterval(async () => {
-        if (isEnabled) {
-          await showNotification(id, minutes);
-          lastNotificationTime = Date.now();
-          // Request wake lock again if needed
-          if (!wakeLock) await requestWakeLock();
-        }
-      }, minutes * 60 * 1000);
-      
-      // Store the regular interval timer
-      activeReminders.set(id + '_interval', intervalId);
+  const scheduleNextReminderCheck = () => {
+    if (activeTimer) {
+      clearTimeout(activeTimer);
     }
-  }, nextNotificationTime - now);
+    
+    console.log(`[ServiceWorker Debug] Scheduling next reminder check in ${minutes} minutes`);
+    
+    activeTimer = setTimeout(async () => {
+      // Only show notification if enabled and within reminder hours
+      if (isEnabled && isWithinReminderHours()) {
+        console.log(`[ServiceWorker Debug] Showing notification at ${new Date().toLocaleTimeString()}`);
+        await showNotification(id, minutes);
+        lastNotificationTime = Date.now();
+      } else {
+        console.log("[ServiceWorker Debug] Skipping notification - outside reminder hours or disabled");
+        console.log(`[ServiceWorker Debug] isEnabled: ${isEnabled}`);
+        
+        // Log whether we're within reminder hours
+        isWithinReminderHours();
+      }
+      
+      // Always schedule the next check, even if we skipped this one
+      console.log("[ServiceWorker Debug] Re-scheduling next check");
+      scheduleNextReminderCheck();
+    }, minutes * 60 * 1000);
+    
+    // Store the timer
+    activeReminders.set(id + '_timer', activeTimer);
+    
+    // Send a debug status message to clients
+    self.clients.matchAll().then((clients) => {
+      clients.forEach((client) => {
+        client.postMessage({
+          type: 'REMINDER_DEBUG_STATUS',
+          isEnabled: isEnabled,
+          nextCheck: new Date(Date.now() + minutes * 60 * 1000).toLocaleTimeString(),
+          interval: minutes,
+          withinHours: isWithinReminderHours()
+        });
+      });
+    });
+  };
+  
+  // If within reminder hours, show initial test notification
+  if (isWithinReminderHours()) {
+    // Show a test notification immediately
+    showTestNotification(minutes);
+  } else {
+    console.log("[ServiceWorker Debug] Not showing test notification - outside reminder hours");
+    
+    // If we're outside the hours, schedule a one-time check for when we enter the hours
+    if (startTime) {
+      const now = new Date();
+      const startHour = startTime.getHours();
+      const startMinutes = startTime.getMinutes();
+      
+      const targetTime = new Date();
+      targetTime.setHours(startHour, startMinutes, 0, 0);
+      
+      // If start time is earlier today, schedule for tomorrow
+      if (targetTime <= now) {
+        targetTime.setDate(targetTime.getDate() + 1);
+      }
+      
+      const msUntilStart = targetTime.getTime() - now.getTime();
+      console.log(`[ServiceWorker Debug] Scheduling special check for when reminder hours begin at ${targetTime.toLocaleString()}, ${msUntilStart}ms from now`);
+      
+      setTimeout(() => {
+        // Re-check if we're still supposed to be showing reminders
+        if (isEnabled && isWithinReminderHours()) {
+          console.log(`[ServiceWorker Debug] Special start time reached, showing notification`);
+          showNotification(id, minutes);
+          lastNotificationTime = Date.now();
+        }
+        
+        // Schedule the regular checks
+        scheduleNextReminderCheck();
+      }, msUntilStart);
+    }
+  }
 
-  // Store the initial timer
-  activeReminders.set(id + '_timeout', timerId);
-  isEnabled = true;
+  // Start the reminder loop for regular checks
+  scheduleNextReminderCheck();
 
   // Send confirmation to client with next notification time
   client?.postMessage({
     type: 'REMINDER_STARTED',
     id: id,
     minutes: minutes,
-    nextNotification: nextNotificationTime
+    nextNotification: nextNotificationTime,
+    startTime: startTimeStr,
+    endTime: endTimeStr
   });
 }
 
@@ -307,17 +409,35 @@ async function showTestNotification(minutes) {
   const body = `Hydration reminders will appear every ${minutes} minute(s)`;
 
   try {
-    await self.registration.showNotification(title, {
+    console.log('[ServiceWorker Debug] Sending test notification');
+    
+    // Use different options for test notification
+    const testOptions = {
       body: body,
       icon: '/icon-192.png',
       badge: '/icon-192.png',
       tag: 'hydration-test-notification', // Consistent tag for test notifications
       requireInteraction: false,
       vibrate: [100, 50, 100],
-    });
-    console.log('[ServiceWorker] Test notification sent');
+      timestamp: Date.now(),
+      data: { isTest: true }
+    };
+    
+    await self.registration.showNotification(title, testOptions);
+    console.log('[ServiceWorker Debug] Test notification sent successfully');
+    
+    // Mark the time of the test notification
+    lastNotificationTime = Date.now();
   } catch (error) {
-    console.error('[ServiceWorker] Error showing test notification:', error);
+    console.error('[ServiceWorker Debug] Error showing test notification:', error);
+    console.error(error);
+    
+    // Try a simplified version as fallback
+    try {
+      await self.registration.showNotification('Water Reminder', { body: 'Test notification' });
+    } catch (fallbackError) {
+      console.error('[ServiceWorker Debug] Even fallback notification failed:', fallbackError);
+    }
   }
 }
 
