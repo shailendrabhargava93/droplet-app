@@ -1,0 +1,79 @@
+.reminder-settings .settings-section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 1.5rem;
+  }
+  
+  .reminder-settings .settings-section-header h3 {
+    font-size: 1.2rem;
+    font-weight: 500;
+    color: #333;
+    margin: 0;
+  }
+  
+  .reminder-settings .settings-section-header i {
+    font-size: 1.2rem;
+    color: #00BCD4;
+  }
+  
+  .enable-reminder {
+    display: flex;
+    align-items: center;
+    gap: 5rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .enable-reminder label {
+    color: var(--text-color-secondary);
+  }
+  
+  .settings-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    gap: 2rem; /* Add space between label and control */
+  }
+  
+  .settings-row label {
+    color: var(--text-color-secondary);
+    font-weight: 500;
+    flex: 1;
+  }
+  
+  .settings-row .p-dropdown {
+    min-width: 194px; /* Consistent width for dropdown */
+  }
+  
+  .time-display {
+    background: var(--surface-ground);
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    color: var(--text-color);
+  }
+  
+  .notification-warning,
+  .reminder-status {
+    color: var(--text-color-secondary);
+    font-size: 0.875rem;
+    margin: 1rem 0;
+    padding: 0;
+  }
+  
+  /* Adjust InputSwitch alignment */
+  .reminder-settings .p-inputswitch {
+    margin-left: 1rem;
+  }
+  
+  /* Style the frequency dropdown */
+  .reminder-settings .frequency-dropdown {
+    flex: 0 0 auto; /* Don't grow or shrink */
+    width: 150px; /* Fixed width */
+  }
+  
+  /* Add spacing in dropdown items */
+  .reminder-settings .p-dropdown-item {
+    padding: 0.75rem 1rem;
+  }
+  
