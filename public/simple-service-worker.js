@@ -28,15 +28,63 @@ let lastNotificationTime = 0;
 let currentInterval = 0;
 let isEnabled = false;
 let wakeLock = null;
+let heartbeatInterval = null;
 
-// Request wake lock
+// Enhanced wake lock with periodic renewal and heartbeat
 async function requestWakeLock() {
   if ('wakeLock' in navigator) {
     try {
+      // Request the wake lock
       wakeLock = await navigator.wakeLock.request('screen');
       console.log('Wake Lock is active');
+
+      // Set up periodic wake lock renewal
+      if (heartbeatInterval) {
+        clearInterval(heartbeatInterval);
+      }
+      
+      heartbeatInterval = setInterval(async () => {
+        try {
+          if (wakeLock) {
+            // Release existing wake lock
+            await wakeLock.release();
+          }
+          // Request new wake lock
+          wakeLock = await navigator.wakeLock.request('screen');
+          console.log('Wake Lock renewed');
+          
+          // Send heartbeat to all clients
+          const clients = await self.clients.matchAll();
+          clients.forEach(client => {
+            client.postMessage({ type: 'HEARTBEAT' });
+          });
+        } catch (err) {
+          console.log(`Wake Lock renewal error: ${err.name}, ${err.message}`);
+          // Try to reacquire after error
+          setTimeout(requestWakeLock, 1000);
+        }
+      }, 50000); // Renew every 50 seconds
     } catch (err) {
       console.log(`Wake Lock error: ${err.name}, ${err.message}`);
+      // Try alternative notification method
+      registerPeriodicSync();
+    }
+  } else {
+    // Fallback for devices without wake lock
+    registerPeriodicSync();
+  }
+}
+
+// Register periodic sync as backup
+async function registerPeriodicSync() {
+  if ('periodicSync' in self.registration) {
+    try {
+      await self.registration.periodicSync.register('water-reminder', {
+        minInterval: Math.max(60 * 60, currentInterval * 60) // At least 1 hour or reminder interval
+      });
+      console.log('Periodic sync registered');
+    } catch (err) {
+      console.log('Periodic sync registration failed:', err);
     }
   }
 }
@@ -47,7 +95,7 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-// Function to schedule the next notification
+// Function to schedule the next notification with redundancy
 const scheduleNextNotification = () => {
   if (!isEnabled || currentInterval <= 0) return;
 
@@ -64,15 +112,66 @@ const scheduleNextNotification = () => {
     (currentInterval * 60 * 1000) - timeSinceLastNotification
   );
 
-  // Schedule next notification
-  activeTimer = setTimeout(() => {
-    self.registration.showNotification(NOTIFICATION_TITLE, NOTIFICATION_OPTIONS)
-      .then(() => {
-        lastNotificationTime = Date.now();
-        // Schedule the next notification
-        scheduleNextNotification();
-      });
+  // Schedule next notification with multiple approaches
+  activeTimer = setTimeout(async () => {
+    try {
+      // First try: Standard notification
+      await self.registration.showNotification(NOTIFICATION_TITLE, NOTIFICATION_OPTIONS);
+      lastNotificationTime = Date.now();
+      
+      // Store notification time in IndexedDB for recovery
+      await storeNotificationTime(lastNotificationTime);
+      
+      // Schedule next notification
+      scheduleNextNotification();
+      
+      // Also schedule a backup notification using Background Tasks API if available
+      if ('scheduling' in self.registration) {
+        const backupTime = new Date(Date.now() + (currentInterval * 60 * 1000));
+        try {
+          await self.registration.scheduling.scheduleTask({
+            taskName: 'water-reminder-backup',
+            deadline: backupTime,
+            backoffStep: 5 * 60 * 1000 // 5 minutes
+          });
+        } catch (err) {
+          console.log('Backup scheduling failed:', err);
+        }
+      }
+    } catch (error) {
+      console.error('Error showing notification:', error);
+      // Retry after 1 minute if notification fails
+      setTimeout(() => {
+        showNotification(NOTIFICATION_TITLE, {
+          ...NOTIFICATION_OPTIONS,
+          requireInteraction: true
+        });
+      }, 60000);
+    }
   }, nextNotificationDelay);
+
+  // Set up a backup timer using a Web Worker for redundancy
+  const workerCode = `
+    setTimeout(() => {
+      self.postMessage('showNotification');
+    }, ${nextNotificationDelay + 1000});
+  `;
+  const blob = new Blob([workerCode], { type: 'application/javascript' });
+  const workerURL = URL.createObjectURL(blob);
+  const backupWorker = new Worker(workerURL);
+  
+  backupWorker.onmessage = async () => {
+    const timeSinceLastNotification = Date.now() - lastNotificationTime;
+    if (timeSinceLastNotification >= currentInterval * 60 * 1000) {
+      try {
+        await self.registration.showNotification(NOTIFICATION_TITLE, NOTIFICATION_OPTIONS);
+      } catch (err) {
+        console.log('Backup notification failed:', err);
+      }
+    }
+    backupWorker.terminate();
+    URL.revokeObjectURL(workerURL);
+  };
 };
 
 self.addEventListener('activate', (event) => {
@@ -173,6 +272,50 @@ async function showNotification(id, minutes) {
       icon: NOTIFICATION_OPTIONS.icon,
     });
   }
+}
+
+// Handle periodic sync events as a backup for notifications
+self.addEventListener('periodicsync', async (event) => {
+  if (event.tag === 'water-reminder' && isEnabled) {
+    const now = Date.now();
+    const timeSinceLastNotification = now - lastNotificationTime;
+    
+    // Only show notification if enough time has passed
+    if (timeSinceLastNotification >= currentInterval * 60 * 1000) {
+      try {
+        await self.registration.showNotification(NOTIFICATION_TITLE, NOTIFICATION_OPTIONS);
+        lastNotificationTime = now;
+        await storeNotificationTime(lastNotificationTime);
+      } catch (err) {
+        console.log('Periodic sync notification failed:', err);
+      }
+    }
+  }
+});
+
+// Store last notification time in IndexedDB
+async function storeNotificationTime(timestamp) {
+  const db = await openDB();
+  const tx = db.transaction('notifications', 'readwrite');
+  const store = tx.objectStore('notifications');
+  await store.put(timestamp, 'lastNotification');
+}
+
+// Open IndexedDB
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('water-reminders', 1);
+    
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+    
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      if (!db.objectStoreNames.contains('notifications')) {
+        db.createObjectStore('notifications');
+      }
+    };
+  });
 }
 
 function startReminder(id, minutes, client, startTimeStr, endTimeStr) {
